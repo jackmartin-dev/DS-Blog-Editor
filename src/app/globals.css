@@ -119,7 +119,11 @@ body {
 .prose h4 { font-size: 1.05rem; font-weight: 600; margin: 0.75rem 0 0.4rem; }
 .prose p { margin: 0.6rem 0; line-height: 1.7; }
 .prose ul, .prose ol { padding-left: 1.5rem; margin: 0.5rem 0; }
-.prose li { margin: 0.25rem 0; }
+.prose ul { list-style-type: disc; }
+.prose ol { list-style-type: decimal; }
+.prose ul ul { list-style-type: circle; }
+.prose ul ul ul { list-style-type: square; }
+.prose li { margin: 0.25rem 0; display: list-item; }
 .prose blockquote { border-left: 3px solid #F15C20; padding-left: 1rem; color: #6b7280; margin: 1rem 0; font-style: italic; }
 .prose code { background: #f3f4f6; padding: 0.1em 0.35em; border-radius: 4px; font-size: 0.875em; font-family: monospace; }
 .prose pre { background: #1f2937; color: #f9fafb; padding: 1rem; border-radius: 8px; overflow-x: auto; margin: 1rem 0; }
@@ -129,6 +133,18 @@ body {
 .prose table { border-collapse: collapse; width: 100%; margin: 1rem 0; table-layout: fixed; }
 .prose th, .prose td { border: 1px solid #e5e7eb; padding: 0.5rem 0.75rem; text-align: left; word-break: break-word; overflow-wrap: break-word; white-space: normal; }
 .prose th { background: #f9fafb; font-weight: 600; }
+
+/* ─── ProseMirror list markers ──────────────────────────────────────────────── */
+.ProseMirror ul,
+.ProseMirror ol {
+  padding-left: 1.5rem;
+  margin: 0.5rem 0;
+}
+.ProseMirror ul { list-style-type: disc; }
+.ProseMirror ol { list-style-type: decimal; }
+.ProseMirror ul ul { list-style-type: circle; }
+.ProseMirror ul ul ul { list-style-type: square; }
+.ProseMirror li { display: list-item; margin: 0.2rem 0; }
 
 /* ─── ProseMirror table: fixed layout + word-wrap ───────────────────── */
 .ProseMirror table {
