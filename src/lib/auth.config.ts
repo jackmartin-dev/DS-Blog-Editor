@@ -4,8 +4,6 @@ import Credentials from "next-auth/providers/credentials";
 // Edge-safe auth config: no Node.js-only imports (crypto, mongoose).
 // The authorize callback runs only on the auth API route (Node.js), not in middleware.
 export const authConfig = {
-  // Trust the Host header so Vercel/reverse-proxies work without AUTH_URL env var.
-  trustHost: true,
   providers: [
     Credentials({
       credentials: {
