@@ -1,88 +1,93 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import {
-  FiBook, FiEdit3, FiImage, FiLink, FiList, FiSearch,
-  FiSave, FiEye, FiTag, FiFileText, FiAlertCircle, FiCheckCircle,
-  FiChevronDown, FiChevronRight,
+  FiEdit3, FiImage, FiLink, FiSearch, FiSave,
+  FiTag, FiFileText, FiChevronRight, FiAlertTriangle,
+  FiInfo, FiCheckSquare, FiZap,
 } from "react-icons/fi";
-import {
-  MdTableChart, MdAutoAwesome, MdOutlineSchema,
-} from "react-icons/md";
+import { MdTableChart, MdAutoAwesome, MdOutlineSchema } from "react-icons/md";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Data Model ───────────────────────────────────────────────────────────────
 
-interface Section {
+interface NavItem {
   id: string;
-  icon: React.ReactNode;
-  title: string;
-  content: React.ReactNode;
+  label: string;
+  items?: { id: string; label: string }[];
 }
 
-// ─── Reusable Components ──────────────────────────────────────────────────────
+const NAV: NavItem[] = [
+  { id: "getting-started", label: "Getting Started" },
+  {
+    id: "editor", label: "Editor",
+    items: [
+      { id: "toolbar", label: "Toolbar Reference" },
+      { id: "images", label: "Images" },
+      { id: "tables", label: "Tables" },
+      { id: "links", label: "Links" },
+      { id: "cta", label: "CTA Banner" },
+    ],
+  },
+  {
+    id: "seo", label: "SEO",
+    items: [
+      { id: "seo-basics", label: "SEO Fundamentals" },
+      { id: "seo-fields", label: "SEO Fields Reference" },
+      { id: "seo-score", label: "SEO Score & Checks" },
+      { id: "schema", label: "JSON-LD Schema" },
+      { id: "seo-best-practices", label: "Best Practices" },
+    ],
+  },
+  {
+    id: "publishing", label: "Publishing",
+    items: [
+      { id: "publish", label: "Draft & Publish" },
+      { id: "sitemap", label: "Sitemap" },
+      { id: "stats", label: "Post Statistics" },
+      { id: "categories", label: "Categories & Tags" },
+    ],
+  },
+];
 
-function Badge({ children, color = "orange" }: { children: React.ReactNode; color?: "orange" | "green" | "blue" | "gray" }) {
-  const cls = {
-    orange: "bg-orange-100 text-[#F15C20] border-orange-200",
-    green: "bg-green-100 text-green-700 border-green-200",
-    blue: "bg-blue-100 text-blue-700 border-blue-200",
-    gray: "bg-gray-100 text-gray-600 border-gray-200",
-  }[color];
-  return <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold border ${cls}`}>{children}</span>;
-}
+// Flatten for lookup
+const ALL_IDS = NAV.flatMap((g) => [g.id, ...(g.items?.map((i) => i.id) ?? [])]);
 
-function Tip({ children }: { children: React.ReactNode }) {
+// ─── Micro Components ─────────────────────────────────────────────────────────
+
+function Callout({ type, children }: { type: "tip" | "warning" | "info"; children: React.ReactNode }) {
+  const cfg = {
+    tip: { bg: "bg-emerald-50", border: "border-emerald-200", icon: <FiCheckSquare className="text-emerald-600 shrink-0 mt-0.5" size={15} />, text: "text-emerald-900" },
+    warning: { bg: "bg-amber-50", border: "border-amber-200", icon: <FiAlertTriangle className="text-amber-600 shrink-0 mt-0.5" size={15} />, text: "text-amber-900" },
+    info: { bg: "bg-blue-50", border: "border-blue-200", icon: <FiInfo className="text-blue-600 shrink-0 mt-0.5" size={15} />, text: "text-blue-900" },
+  }[type];
   return (
-    <div className="flex gap-3 bg-green-50 border border-green-200 rounded-xl p-4 my-4">
-      <FiCheckCircle className="text-green-600 shrink-0 mt-0.5" size={16} />
-      <p className="text-sm text-green-800">{children}</p>
+    <div className={`flex gap-3 ${cfg.bg} ${cfg.border} border rounded-lg p-3.5 my-5 text-sm ${cfg.text}`}>
+      {cfg.icon}
+      <div>{children}</div>
     </div>
   );
 }
 
-function Warning({ children }: { children: React.ReactNode }) {
+function DataTable({ headers, rows }: { headers?: string[]; rows: string[][] }) {
   return (
-    <div className="flex gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4 my-4">
-      <FiAlertCircle className="text-amber-600 shrink-0 mt-0.5" size={16} />
-      <p className="text-sm text-amber-800">{children}</p>
-    </div>
-  );
-}
-
-function Step({ number, title, children }: { number: number; title: string; children: React.ReactNode }) {
-  return (
-    <div className="flex gap-4 my-5">
-      <div className="shrink-0 w-8 h-8 rounded-full bg-[#F15C20] text-white text-sm font-bold flex items-center justify-center">
-        {number}
-      </div>
-      <div className="flex-1 pt-0.5">
-        <p className="font-semibold text-gray-900 mb-1">{title}</p>
-        <div className="text-sm text-gray-600 space-y-1">{children}</div>
-      </div>
-    </div>
-  );
-}
-
-function KbdShortcut({ keys }: { keys: string[] }) {
-  return (
-    <span className="inline-flex items-center gap-1">
-      {keys.map((k, i) => (
-        <kbd key={i} className="px-1.5 py-0.5 bg-gray-100 border border-gray-300 rounded text-xs font-mono text-gray-700">{k}</kbd>
-      ))}
-    </span>
-  );
-}
-
-function Table({ rows }: { rows: [string, string, string?][] }) {
-  return (
-    <div className="overflow-x-auto rounded-xl border border-gray-200 my-4">
-      <table className="w-full text-sm">
+    <div className="overflow-x-auto rounded-lg border border-gray-200 my-5 text-sm">
+      <table className="w-full">
+        {headers && (
+          <thead>
+            <tr className="bg-gray-50 border-b border-gray-200">
+              {headers.map((h) => (
+                <th key={h} className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
+              ))}
+            </tr>
+          </thead>
+        )}
         <tbody>
-          {rows.map(([a, b, c], i) => (
-            <tr key={i} className={i % 2 === 0 ? "bg-white" : "bg-gray-50"}>
-              <td className="px-4 py-2.5 font-medium text-gray-800 border-r border-gray-200 w-1/3">{a}</td>
-              <td className="px-4 py-2.5 text-gray-600 w-1/3">{b}</td>
-              {c !== undefined && <td className="px-4 py-2.5 text-gray-500 border-l border-gray-200">{c}</td>}
+          {rows.map((row, i) => (
+            <tr key={i} className={i % 2 ? "bg-gray-50/50" : "bg-white"}>
+              {row.map((cell, j) => (
+                <td key={j} className={`px-4 py-2.5 ${j === 0 ? "font-medium text-gray-800 text-xs" : "text-gray-600"} border-t border-gray-100`}>{cell}</td>
+              ))}
             </tr>
           ))}
         </tbody>
@@ -91,474 +96,540 @@ function Table({ rows }: { rows: [string, string, string?][] }) {
   );
 }
 
-// ─── Guide Sections ───────────────────────────────────────────────────────────
+function Kbd({ children }: { children: string }) {
+  return <kbd className="inline-flex items-center px-1.5 py-0.5 rounded border border-gray-300 bg-gray-100 text-xs font-mono text-gray-700 mx-0.5">{children}</kbd>;
+}
 
-const SECTIONS: Section[] = [
-  {
-    id: "overview",
-    icon: <FiBook size={18} />,
-    title: "Overview",
-    content: (
-      <div className="space-y-4">
-        <p className="text-gray-600 leading-relaxed">
-          The DS Blog Editor is a custom CMS built to replace WordPress + Yoast SEO. It gives you full control over blog content, SEO metadata, structured data, and publishing — all from one unified interface connected directly to the Dignite Studios website.
-        </p>
-        <div className="grid grid-cols-3 gap-4">
-          {[
-            ["Rich Editor", "TipTap-powered editor with formatting, tables, images, CTA banners and more"],
-            ["Built-in SEO", "Meta tags, Open Graph, Twitter Cards, JSON-LD schema — all editable"],
-            ["Live Sitemap", "Published posts are instantly added to /sitemap.xml — no manual steps"],
-          ].map(([title, desc]) => (
-            <div key={title} className="bg-orange-50 border border-orange-100 rounded-xl p-4">
-              <p className="font-semibold text-[#F15C20] text-sm mb-1">{title}</p>
-              <p className="text-xs text-gray-600">{desc}</p>
-            </div>
-          ))}
-        </div>
-        <Tip>All blog posts are stored in MongoDB and served directly on dignitestudios.com/blog — no re-deployment needed after publishing.</Tip>
-      </div>
-    ),
-  },
-  {
-    id: "writing",
-    icon: <FiEdit3 size={18} />,
-    title: "Writing a Blog Post",
-    content: (
-      <div className="space-y-2">
-        <Step number={1} title="Post Title">
-          <p>Enter the title at the top of the left panel. This is the H1 of your blog and is also used to auto-generate the URL slug.</p>
-          <Tip>Write a clear, keyword-rich title (50–65 characters ideal). The slug auto-generates — you can manually edit it below.</Tip>
-        </Step>
-        <Step number={2} title="URL Slug">
-          <p>The slug field is below the title. It auto-fills from your title (lowercase, hyphens). Edit it if needed — keep it short and relevant.</p>
-          <Warning>Once a post is published, avoid changing the slug as it will break existing links and SEO rankings.</Warning>
-        </Step>
-        <Step number={3} title="Write in the Editor">
-          <p>The main content area supports full rich-text editing. Use the toolbar to format text, add headings, insert images, create tables, and more.</p>
-        </Step>
-        <Step number={4} title="Set Featured Image">
-          <p>Upload a featured image in the right sidebar under <strong>Featured Image</strong>. This is <Badge color="orange">required</Badge> before publishing. The alt text auto-fills from the post title.</p>
-        </Step>
-        <Step number={5} title="Fill Post Details">
-          <p>Set the post status, assign categories, add tags, and write a short excerpt in the right sidebar. The excerpt is shown on listing pages and used for meta descriptions.</p>
-        </Step>
-        <Step number={6} title="Save or Publish">
-          <p>Use the <strong>Save Draft</strong> button at the top right. Set the status dropdown to <Badge color="green">Published</Badge> and save to make it live on the website.</p>
-        </Step>
-      </div>
-    ),
-  },
-  {
-    id: "toolbar",
-    icon: <FiList size={18} />,
-    title: "Editor Toolbar",
-    content: (
-      <div>
-        <p className="text-gray-600 mb-4">The toolbar is always visible at the top of the editor. Here is what each group of buttons does:</p>
-        <Table rows={[
-          ["Undo / Redo", "Undo last action or redo it", ""],
-          ["Bold / Italic / Underline / Strike", "Inline text formatting", ""],
-          ["Headings (H1–H6)", "Set paragraph as a heading level", ""],
-          ["Bullet List / Numbered List", "Create unordered or ordered lists", ""],
-          ["Blockquote", "Indent text as a blockquote", ""],
-          ["Code Block", "Insert a preformatted code snippet", ""],
-          ["Text Align", "Left, center, or right alignment", ""],
-          ["Text Color", "Change the color of selected text", ""],
-          ["Font Size", "Increase or decrease font size", ""],
-          ["Link", "Insert or edit a hyperlink on selected text", ""],
-          ["Image", "Upload or embed an image by URL", ""],
-          ["Table", "Insert a table. Edit rows/cols via toolbar when cursor is inside", ""],
-          ["CTA Banner", "Insert an orange call-to-action block", ""],
-        ]} />
-        <div className="mt-4">
-          <p className="font-semibold text-gray-800 mb-2">Keyboard Shortcuts</p>
-          <Table rows={[
-            ["Bold", "Ctrl + B", ""],
-            ["Italic", "Ctrl + I", ""],
-            ["Underline", "Ctrl + U", ""],
-            ["Undo", "Ctrl + Z", ""],
-            ["Redo", "Ctrl + Shift + Z", ""],
-            ["Link", "Ctrl + K", ""],
-          ]} />
-        </div>
-        <Tip>To edit a link: click the linked text first, then click the Link icon in the toolbar. Clicking linked text directly will NOT navigate — use Ctrl+Click or the external link icon to open it.</Tip>
-      </div>
-    ),
-  },
-  {
-    id: "images",
-    icon: <FiImage size={18} />,
-    title: "Images",
-    content: (
-      <div className="space-y-4">
-        <p className="text-gray-600">Images in the editor support both upload and URL embedding. After inserting, click the image to see positioning and size controls.</p>
-        <Table rows={[
-          ["Insert Image", "Toolbar → Image icon → Upload file or paste URL", ""],
-          ["Resize", "Click image → drag the resize handle at bottom-right corner", ""],
-          ["Align Left / Center / Right", "Click image → alignment buttons appear above", ""],
-          ["Float (wrap text)", "Click image → choose float left or float right", ""],
-          ["Alt Text", "Set during upload dialog — important for SEO and accessibility", ""],
-        ]} />
-        <Tip>Always fill in the alt text — it is read by screen readers and indexed by Google Image Search. For the featured image, alt text auto-fills from the post title.</Tip>
-        <Warning>Large images slow down page load. Resize images to max 1200px wide before uploading. The site uses WebP optimization automatically.</Warning>
-      </div>
-    ),
-  },
-  {
-    id: "tables",
-    icon: <MdTableChart size={18} />,
-    title: "Tables",
-    content: (
-      <div className="space-y-4">
-        <p className="text-gray-600">Click the Table icon in the toolbar to insert a table. When your cursor is inside a table, additional table controls appear in the toolbar.</p>
-        <Table rows={[
-          ["Add Row Below", "Table toolbar → Add Row Below", ""],
-          ["Add Row Above", "Table toolbar → Add Row Above", ""],
-          ["Delete Row", "Table toolbar → Delete Row", ""],
-          ["Add Column After", "Table toolbar → Add Column After", ""],
-          ["Add Column Before", "Table toolbar → Add Column Before", ""],
-          ["Delete Column", "Table toolbar → Delete Column", ""],
-          ["Delete Table", "Table toolbar → Delete Table", ""],
-          ["Max Columns", "10 columns maximum", ""],
-        ]} />
-        <Tip>Click inside any cell to position your cursor in the table. The table toolbar will appear automatically above the main toolbar.</Tip>
-        <Warning>Text in table cells wraps automatically — it will not break the layout. Do not paste large blocks of text into tables as they are hard to read on mobile.</Warning>
-      </div>
-    ),
-  },
-  {
-    id: "links",
-    icon: <FiLink size={18} />,
-    title: "Links",
-    content: (
-      <div className="space-y-4">
-        <p className="text-gray-600">To add a link, select the text first, then click the Link icon in the toolbar.</p>
-        <Step number={1} title="Select text">
-          <p>Highlight the words you want to link.</p>
-        </Step>
-        <Step number={2} title="Click the Link icon">
-          <p>The link dialog opens. Enter the URL, and choose whether to open in a new tab or follow (nofollow).</p>
-        </Step>
-        <Step number={3} title="Edit or remove an existing link">
-          <p>Click on the linked text → click the Link icon again → edit or click Remove Link.</p>
-        </Step>
-        <Warning>Clicking linked text in the editor does NOT open the link (intentional). To open the URL use the external link icon that appears in the link dialog, or Ctrl+Click.</Warning>
-        <Tip>For external links, always check "Open in new tab" and consider "nofollow" for sponsored or affiliate links.</Tip>
-      </div>
-    ),
-  },
-  {
-    id: "cta",
-    icon: <FiFileText size={18} />,
-    title: "CTA Banner",
-    content: (
-      <div className="space-y-4">
-        <p className="text-gray-600">The CTA Banner is a full-width orange call-to-action block. Insert it from the toolbar (last button). All text is editable inline — click any text to edit it directly inside the banner.</p>
-        <Table rows={[
-          ["Heading", "Click the heading text to edit it inline", ""],
-          ["Paragraph", "Click the body text to edit it inline", ""],
-          ["Button Text", "Click the button label to edit it inline", ""],
-          ["Button URL (link type)", "Edit the URL field below the button", ""],
-          ["Email Placeholder (subscribe type)", "Click the placeholder text to edit", ""],
-        ]} />
-        <Tip>Use CTA banners near the end of long articles or between sections to guide readers to contact or subscribe.</Tip>
-      </div>
-    ),
-  },
-  {
-    id: "seo-basics",
-    icon: <FiSearch size={18} />,
-    title: "SEO Basics",
-    content: (
-      <div className="space-y-4">
-        <p className="text-gray-600 leading-relaxed">
-          SEO (Search Engine Optimization) is how Google and other search engines discover, understand, and rank your blog posts. The editor handles the technical SEO for you — your job is to fill in the fields correctly.
-        </p>
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-          <p className="font-semibold text-blue-800 mb-2">What Google looks at (in order of importance):</p>
-          <ol className="list-decimal list-inside text-sm text-blue-700 space-y-1">
-            <li>Content quality and relevance to the search query</li>
-            <li>Page title and meta description</li>
-            <li>URL structure (slug)</li>
-            <li>Headings (H1, H2, H3) structure</li>
-            <li>Internal and external links</li>
-            <li>Image alt texts</li>
-            <li>Page load speed</li>
-            <li>Structured data (JSON-LD schema)</li>
-          </ol>
-        </div>
-        <p className="font-semibold text-gray-800">Focus Keyword</p>
-        <p className="text-sm text-gray-600">The focus keyword is the primary search term you want the post to rank for. Enter it in the SEO dialog. The SEO analyzer will then check how well you have used it across the post.</p>
-        <Tip>Choose one specific focus keyword per post. For example: <em>"mobile app development services"</em> is better than <em>"apps"</em>. Avoid targeting the same keyword on two different posts.</Tip>
-      </div>
-    ),
-  },
-  {
-    id: "seo-dialog",
-    icon: <FiSearch size={18} />,
-    title: "SEO Dialog — Field by Field",
-    content: (
-      <div className="space-y-4">
-        <p className="text-gray-600">Open the SEO dialog by clicking the <strong>SEO Settings</strong> button at the top of the right sidebar. It contains two columns.</p>
+function StepList({ steps }: { steps: { title: string; body: React.ReactNode }[] }) {
+  return (
+    <ol className="my-5 space-y-4">
+      {steps.map((s, i) => (
+        <li key={i} className="flex gap-3.5">
+          <span className="shrink-0 w-6 h-6 rounded-full bg-[#F15C20] text-white text-xs font-bold flex items-center justify-center mt-0.5">{i + 1}</span>
+          <div>
+            <p className="font-semibold text-gray-900 text-sm mb-1">{s.title}</p>
+            <div className="text-sm text-gray-600">{s.body}</div>
+          </div>
+        </li>
+      ))}
+    </ol>
+  );
+}
 
-        <p className="font-semibold text-gray-800 mt-4">Left Column</p>
-        <Table rows={[
-          ["Focus Keyword", "The main keyword you are targeting. Used by the SEO analyzer to score your post.", "Required"],
-          ["SEO Title", "The title shown in Google search results. Max 60 characters. Different from the post title — make it keyword-rich and compelling.", "Required"],
-          ["Meta Description", "The snippet shown under the title in search results. Max 160 characters. Summarize the post and include the keyword.", "Required"],
-          ["Snippet Preview", "Live preview of how your post will appear in Google search results.", "Auto"],
-          ["Canonical URL", "If this post exists at another URL, enter it here to avoid duplicate content issues. Leave blank normally.", "Optional"],
-          ["Robots Index", "Leave checked (default). Uncheck only if you do not want Google to index this post.", "Default: ON"],
-          ["Robots Follow", "Leave checked (default). Uncheck for pages with many outbound links you do not want to pass authority to.", "Default: ON"],
-        ]} />
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return <h2 className="text-xl font-bold text-gray-900 mb-1 mt-8 first:mt-0">{children}</h2>;
+}
 
-        <p className="font-semibold text-gray-800 mt-4">Right Column</p>
-        <Table rows={[
-          ["Meta Keywords", "Comma-separated keywords. Ignored by Google but still read by Bing and Yandex.", "Optional"],
-          ["OG Title", "Title shown when the post is shared on Facebook/LinkedIn. Defaults to SEO title if blank.", "Optional"],
-          ["OG Description", "Description shown in Facebook/LinkedIn share cards.", "Optional"],
-          ["OG Image", "Image shown in Facebook/LinkedIn share cards. Defaults to featured image.", "Optional"],
-          ["Twitter Title", "Title for Twitter (X) card previews.", "Optional"],
-          ["Twitter Description", "Description for Twitter (X) card previews.", "Optional"],
-          ["Twitter Image", "Image for Twitter (X) card previews.", "Optional"],
-          ["Twitter Card Type", "summary_large_image shows a big image. summary shows a small thumbnail.", "Default: large"],
-        ]} />
+function SubTitle({ children }: { children: React.ReactNode }) {
+  return <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mt-7 mb-3">{children}</h3>;
+}
 
-        <Tip>Use the <MdAutoAwesome className="inline text-[#F15C20]" size={14} /> AI button next to any SEO field to auto-generate optimized content. The AI is limited to 60 chars for titles and 160 chars for descriptions automatically.</Tip>
+function Para({ children }: { children: React.ReactNode }) {
+  return <p className="text-sm text-gray-600 leading-relaxed my-3">{children}</p>;
+}
+
+function Divider() {
+  return <hr className="border-gray-100 my-8" />;
+}
+
+// ─── Content Map ──────────────────────────────────────────────────────────────
+
+const CONTENT: Record<string, React.ReactNode> = {
+  "getting-started": (
+    <>
+      <SectionTitle>Getting Started</SectionTitle>
+      <Para>
+        DS Blog Editor is a custom CMS built to replace WordPress + Yoast SEO for the Dignite Studios website.
+        Every blog post you create here is stored in MongoDB and served live at{" "}
+        <code className="text-xs bg-gray-100 px-1.5 py-0.5 rounded text-[#F15C20]">dignitestudios.com/blog</code> — no deployment needed.
+      </Para>
+
+      <div className="grid grid-cols-3 gap-3 my-6">
+        {[
+          [<FiEdit3 key="e" size={18} />, "Rich Editor", "TipTap-powered — formatting, tables, images, and CTA banners"],
+          [<FiSearch key="s" size={18} />, "Full SEO Suite", "Meta tags, OG, Twitter Cards, JSON-LD schema, live SEO scoring"],
+          [<FiZap key="z" size={18} />, "AI-Powered", "Auto-generate SEO titles, descriptions, excerpts and schema fields"],
+        ].map(([icon, title, desc]) => (
+          <div key={title as string} className="border border-gray-200 rounded-xl p-4">
+            <div className="text-[#F15C20] mb-2">{icon}</div>
+            <p className="text-sm font-semibold text-gray-800 mb-1">{title as string}</p>
+            <p className="text-xs text-gray-500">{desc as string}</p>
+          </div>
+        ))}
       </div>
-    ),
-  },
-  {
-    id: "seo-score",
-    icon: <FiCheckCircle size={18} />,
-    title: "SEO Score & Analysis",
-    content: (
-      <div className="space-y-4">
-        <p className="text-gray-600">The SEO Analysis accordion in the right sidebar gives you a live score and actionable recommendations. Open it to see what to fix.</p>
-        <Table rows={[
-          ["Green (Good)", "The check has passed — nothing to do", ""],
-          ["Amber (Improve)", "The check is acceptable but could be better", ""],
-          ["Red (Fix)", "The check has failed — needs attention before publishing", ""],
-        ]} />
-        <p className="font-semibold text-gray-800 mt-4">Common checks explained:</p>
-        <Table rows={[
-          ["Focus keyword in title", "Your SEO title should contain the focus keyword", ""],
-          ["Focus keyword in meta description", "Your meta description should contain the focus keyword", ""],
-          ["Focus keyword in slug", "Your URL slug should contain the focus keyword", ""],
-          ["Focus keyword in first paragraph", "Mention the keyword in the opening lines of the post", ""],
-          ["Keyword density", "Aim for 1–3% — not too rare, not stuffed", ""],
-          ["Meta description length", "Must be between 120–160 characters", ""],
-          ["SEO title length", "Must be between 50–60 characters", ""],
-          ["Post length", "Posts under 300 words are considered thin content", ""],
-          ["Internal links", "Link to other pages on dignitestudios.com to improve crawlability", ""],
-          ["Image alt text", "All images should have descriptive alt text", ""],
-          ["Headings structure", "Use H2/H3 subheadings to break up the content", ""],
-        ]} />
-        <Tip>Aim for a score above 70 before publishing. You do not need a perfect 100 — focus on the red items first.</Tip>
+
+      <SubTitle>Quick workflow</SubTitle>
+      <StepList steps={[
+        { title: "Log in", body: "Go to /login and sign in with your admin credentials." },
+        { title: "Create a post", body: "Click New Post in the sidebar. Enter a title — the slug auto-generates." },
+        { title: "Write your content", body: "Use the rich editor. Add images, headings, tables, and CTA banners as needed." },
+        { title: "Fill SEO settings", body: "Open SEO Settings in the right sidebar. Set focus keyword, SEO title, and meta description. Use the AI buttons to generate suggestions." },
+        { title: "Upload a featured image", body: "Required before publishing. Alt text auto-fills from your post title." },
+        { title: "Publish", body: 'Set status to Published and click Save. The post is live immediately and appears in /sitemap.xml.' },
+      ]} />
+
+      <Callout type="tip">
+        Aim for an SEO score above 70 before publishing. Open the SEO Analysis accordion in the right sidebar to see live checks.
+      </Callout>
+    </>
+  ),
+
+  toolbar: (
+    <>
+      <SectionTitle>Toolbar Reference</SectionTitle>
+      <Para>The toolbar is always pinned at the top of the editor. When your cursor is inside a table, additional table controls appear automatically.</Para>
+      <DataTable
+        headers={["Button", "Action"]}
+        rows={[
+          ["Undo / Redo", "Undo or redo the last change"],
+          ["Bold", "Toggle bold on selected text"],
+          ["Italic", "Toggle italic on selected text"],
+          ["Underline", "Toggle underline"],
+          ["Strikethrough", "Toggle strikethrough"],
+          ["H1 – H6", "Set heading level"],
+          ["Bullet List", "Unordered list"],
+          ["Numbered List", "Ordered list"],
+          ["Blockquote", "Indent as a blockquote"],
+          ["Code Block", "Preformatted code block"],
+          ["Align Left / Center / Right", "Text alignment"],
+          ["Text Color", "Color picker for selected text"],
+          ["Font Size", "Increase / decrease font size"],
+          ["Link", "Insert or edit a hyperlink"],
+          ["Image", "Upload or embed an image"],
+          ["Table", "Insert a table"],
+          ["CTA Banner", "Insert an orange call-to-action block"],
+        ]}
+      />
+      <SubTitle>Keyboard shortcuts</SubTitle>
+      <DataTable
+        headers={["Action", "Shortcut"]}
+        rows={[
+          ["Bold", "Ctrl + B"],
+          ["Italic", "Ctrl + I"],
+          ["Underline", "Ctrl + U"],
+          ["Undo", "Ctrl + Z"],
+          ["Redo", "Ctrl + Shift + Z"],
+          ["Link", "Ctrl + K"],
+        ]}
+      />
+    </>
+  ),
+
+  images: (
+    <>
+      <SectionTitle>Images</SectionTitle>
+      <Para>Insert images via the toolbar Image button. Click any image after inserting to access controls.</Para>
+      <DataTable
+        headers={["Task", "How"]}
+        rows={[
+          ["Insert", "Toolbar → Image → upload file or paste URL"],
+          ["Resize", "Click image → drag the bottom-right handle"],
+          ["Align", "Click image → alignment buttons in the floating toolbar"],
+          ["Float (text wrap)", "Click image → float left or float right"],
+          ["Alt text", "Set in the upload dialog — required for SEO"],
+        ]}
+      />
+      <Callout type="tip">Always fill in the alt text. It improves accessibility and is indexed by Google Image Search.</Callout>
+      <Callout type="warning">Compress images to max 1200px wide before uploading. Large images slow down page load and hurt Core Web Vitals.</Callout>
+    </>
+  ),
+
+  tables: (
+    <>
+      <SectionTitle>Tables</SectionTitle>
+      <Para>Click the Table icon in the toolbar to insert a 3×3 table. Place your cursor inside a table cell — the table toolbar appears automatically above the main toolbar.</Para>
+      <DataTable
+        headers={["Action", "Table toolbar button"]}
+        rows={[
+          ["Add row below", "Add Row Below"],
+          ["Add row above", "Add Row Above"],
+          ["Delete row", "Delete Row"],
+          ["Add column after", "Add Column After"],
+          ["Add column before", "Add Column Before"],
+          ["Delete column", "Delete Column"],
+          ["Delete entire table", "Delete Table"],
+          ["Maximum columns", "10"],
+        ]}
+      />
+      <Callout type="info">Text inside cells wraps automatically — it will never break the layout. The table is responsive on the website.</Callout>
+    </>
+  ),
+
+  links: (
+    <>
+      <SectionTitle>Links</SectionTitle>
+      <StepList steps={[
+        { title: "Select text", body: "Highlight the words you want to hyperlink." },
+        { title: "Click the Link icon", body: "The link dialog opens. Enter the URL and choose options (new tab, nofollow)." },
+        { title: "Edit or remove", body: "Click the linked text, then the Link icon again. Edit the URL or click Remove Link." },
+      ]} />
+      <Callout type="warning">
+        Clicking linked text in the editor does NOT open the URL — this is intentional to prevent accidental navigation. To open a link use the external-link icon in the link dialog, or <Kbd>Ctrl</Kbd>+<Kbd>Click</Kbd>.
+      </Callout>
+      <Callout type="tip">For sponsored or affiliate links, check Nofollow. For all external links, check Open in New Tab.</Callout>
+    </>
+  ),
+
+  cta: (
+    <>
+      <SectionTitle>CTA Banner</SectionTitle>
+      <Para>Insert a full-width orange call-to-action block from the toolbar. All text is editable inline — just click any text to edit it directly inside the banner.</Para>
+      <DataTable
+        headers={["Element", "How to edit"]}
+        rows={[
+          ["Heading", "Click the heading text to edit inline"],
+          ["Paragraph", "Click the body text to edit inline"],
+          ["Button label", "Click the button text to edit inline"],
+          ["Button URL", "Edit the URL field shown below the button"],
+        ]}
+      />
+      <Callout type="tip">Place CTA banners at the end of long articles, or between major sections, to drive conversions.</Callout>
+    </>
+  ),
+
+  "seo-basics": (
+    <>
+      <SectionTitle>SEO Fundamentals</SectionTitle>
+      <Para>
+        SEO (Search Engine Optimization) determines where your content appears in search results.
+        The editor handles all technical SEO automatically — your job is to fill the content fields correctly.
+      </Para>
+      <SubTitle>What Google ranks on</SubTitle>
+      <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 my-4">
+        <ol className="list-decimal list-inside text-sm text-gray-700 space-y-1.5">
+          <li>Content quality and relevance to the search query</li>
+          <li>Page title (<code className="text-xs bg-white border border-gray-200 px-1 rounded">seoTitle</code>) and meta description</li>
+          <li>URL slug — short, keyword-rich, no stop words</li>
+          <li>Heading structure (H1 → H2 → H3)</li>
+          <li>Internal links to other pages on the site</li>
+          <li>External links to credible sources</li>
+          <li>Image alt texts</li>
+          <li>Page speed (Core Web Vitals)</li>
+          <li>Structured data (JSON-LD schema)</li>
+          <li>E-E-A-T: Experience, Expertise, Authoritativeness, Trustworthiness</li>
+        </ol>
       </div>
-    ),
-  },
-  {
-    id: "schema",
-    icon: <MdOutlineSchema size={18} />,
-    title: "JSON-LD Schema Generator",
-    content: (
-      <div className="space-y-4">
-        <p className="text-gray-600 leading-relaxed">
-          JSON-LD Schema is structured data that tells Google exactly what your content is — a blog post, an article, a how-to guide, etc. It enables <strong>rich results</strong> in Google Search (star ratings, breadcrumbs, article dates, author info).
-        </p>
-        <p className="font-semibold text-gray-800">How to use it:</p>
-        <Step number={1} title="Open the Schema Generator">
-          <p>In the right sidebar, click the <strong>JSON-LD Schema</strong> button.</p>
-        </Step>
-        <Step number={2} title="Select Article @type">
-          <p><strong>BlogPosting</strong> is correct for most blog posts. Use <strong>Article</strong> for news-style posts and <strong>NewsArticle</strong> for press releases.</p>
-        </Step>
-        <Step number={3} title="Fill in the fields">
-          <p>Headline, URL, Image URL, Description are auto-filled from the post. Set Author Name, Publisher, and dates.</p>
-        </Step>
-        <Step number={4} title="Use AI Fill">
-          <p>Click <strong>AI Fill Fields</strong> to auto-populate all fields based on the post content.</p>
-        </Step>
-        <Step number={5} title="Validate & Save">
-          <p>Use the <strong>Rich Results Test</strong> link in the preview to validate your schema with Google. Click <strong>Save Schema</strong>.</p>
-        </Step>
-        <Tip>Always set the Author name and Publisher name correctly. Google uses this to establish E-E-A-T (Experience, Expertise, Authoritativeness, Trustworthiness) — a key ranking factor for content sites.</Tip>
-        <Warning>The schema is embedded in the page automatically when the post is published. You do not need to copy/paste the script tag anywhere.</Warning>
+      <SubTitle>Focus keyword</SubTitle>
+      <Para>
+        The focus keyword is the primary search query you want this post to rank for.
+        Enter it in the SEO Settings dialog. The live SEO analyzer checks whether you have used it
+        in the title, description, slug, first paragraph, and throughout the body.
+      </Para>
+      <Callout type="tip">Use one focus keyword per post. Target specific long-tail phrases like <em>"react native app development services"</em> rather than broad terms like <em>"apps"</em>. Never target the same keyword on two posts.</Callout>
+    </>
+  ),
+
+  "seo-fields": (
+    <>
+      <SectionTitle>SEO Fields Reference</SectionTitle>
+      <Para>Open SEO Settings from the top of the right sidebar. The dialog has two columns.</Para>
+      <SubTitle>Left column — core SEO</SubTitle>
+      <DataTable
+        headers={["Field", "Description", "Limit"]}
+        rows={[
+          ["Focus Keyword", "Primary keyword — drives the SEO analyzer", "—"],
+          ["SEO Title", "Title shown in Google search results. Different from post title — make it keyword-rich.", "60 chars"],
+          ["Meta Description", "Snippet under title in search results. Include keyword and a call to action.", "160 chars"],
+          ["Snippet Preview", "Live preview of how the post looks in Google results", "Auto"],
+          ["Canonical URL", "If identical content exists at another URL, enter it here to prevent duplicate penalties. Leave blank normally.", "—"],
+          ["Robots Index", "Leave ON. Disable only to exclude from search indexing.", "Default: ON"],
+          ["Robots Follow", "Leave ON. Disable for pages with many outbound links you do not want to endorse.", "Default: ON"],
+        ]}
+      />
+      <SubTitle>Right column — social & meta</SubTitle>
+      <DataTable
+        headers={["Field", "Description"]}
+        rows={[
+          ["Meta Keywords", "Comma-separated keywords. Ignored by Google; minor weight on Bing and Yandex."],
+          ["OG Title", "Facebook / LinkedIn share card title. Falls back to SEO title if blank."],
+          ["OG Description", "Facebook / LinkedIn share card description."],
+          ["OG Image", "Image shown in social share cards. Falls back to featured image."],
+          ["Twitter Title", "Twitter (X) card title."],
+          ["Twitter Description", "Twitter (X) card description."],
+          ["Twitter Image", "Twitter (X) card image."],
+          ["Twitter Card Type", "summary_large_image shows a big image preview; summary shows a thumbnail."],
+        ]}
+      />
+      <Callout type="tip">
+        Use the <MdAutoAwesome className="inline text-[#F15C20] mx-0.5" size={13} /> AI button next to any field to auto-generate optimized content. AI output is hard-capped at the character limit.
+      </Callout>
+    </>
+  ),
+
+  "seo-score": (
+    <>
+      <SectionTitle>SEO Score & Checks</SectionTitle>
+      <Para>The SEO Analysis accordion in the right sidebar gives a live score (0–100) and color-coded check results as you write.</Para>
+      <DataTable
+        headers={["Color", "Meaning"]}
+        rows={[
+          ["🟢 Green — Pass", "Check passed — nothing to do"],
+          ["🟡 Amber — Warn", "Acceptable but improvable"],
+          ["🔴 Red — Fail", "Must be fixed before publishing"],
+        ]}
+      />
+      <SubTitle>All checks explained</SubTitle>
+      <DataTable
+        headers={["Check", "What it tests"]}
+        rows={[
+          ["Keyword in SEO title", "Your SEO title must contain the focus keyword"],
+          ["Keyword in meta description", "Meta description must contain the focus keyword"],
+          ["Keyword in slug", "URL slug should contain the focus keyword"],
+          ["Keyword in first paragraph", "Mention the keyword in the opening lines"],
+          ["Keyword density", "Keyword appears at least once in body text"],
+          ["Meta description length", "Between 120–160 characters"],
+          ["SEO title length", "Between 50–60 characters"],
+          ["Post length", "Posts under 300 words are thin content"],
+          ["Internal links", "At least one link to another page on the site"],
+          ["Image alt texts", "All images have descriptive alt text"],
+          ["Headings structure", "H2 or H3 subheadings are used in the post"],
+        ]}
+      />
+      <Callout type="tip">Fix all red items before publishing. Amber items are optional improvements. A score above 70 is considered good for publishing.</Callout>
+    </>
+  ),
+
+  schema: (
+    <>
+      <SectionTitle>JSON-LD Schema Generator</SectionTitle>
+      <Para>
+        Structured data tells Google exactly what your content is — a blog post, article, author, publisher.
+        It enables <strong>rich results</strong> in search (article dates, author info, breadcrumbs).
+      </Para>
+      <StepList steps={[
+        { title: "Open the generator", body: "Click the JSON-LD Schema button in the right sidebar." },
+        { title: "Select Article @type", body: "Use BlogPosting for blog posts. Use Article for news, NewsArticle for press releases." },
+        { title: "Fill in fields", body: "Headline, URL, Image, and Description auto-fill from your post. Set Author Name, Author URL, Publisher, and dates." },
+        {
+          title: "Use AI Fill",
+          body: <>Click <strong>AI Fill Fields</strong> to populate all fields from the post content automatically.</>,
+        },
+        {
+          title: "Validate",
+          body: <>Use the <strong>Rich Results Test</strong> link in the preview panel to validate with Google before saving.</>,
+        },
+        { title: "Save Schema", body: "Click Save Schema. The schema tag is embedded in the page automatically when published." },
+      ]} />
+      <Callout type="info">
+        <strong>E-E-A-T:</strong> Setting a real Author name and Publisher name matters. Google uses this to assess Experience, Expertise, Authoritativeness, and Trustworthiness — a key ranking signal for content sites.
+      </Callout>
+      <Callout type="warning">You do not need to paste the script tag anywhere. It is injected into the page head automatically on publish.</Callout>
+    </>
+  ),
+
+  "seo-best-practices": (
+    <>
+      <SectionTitle>SEO Best Practices</SectionTitle>
+      <div className="grid grid-cols-2 gap-3 my-5">
+        {[
+          ["One H1 per post", "The post title is your H1. Never add another H1 in the editor body."],
+          ["H2 for every section", "Add an H2 subheading every 300–400 words to structure the content."],
+          ["Keyword in first 100 words", "Mention the focus keyword in the opening paragraph."],
+          ["2–3 internal links", "Link to other pages on dignitestudios.com in every post."],
+          ["External links to sources", "Link to research and statistics — adds trust signals for Google."],
+          ["Compress images", "Use WebP format. Max 1200px wide. Filename should be descriptive."],
+          ["Meta description = ad copy", "Write it like a headline — compelling enough to make someone click."],
+          ["Avoid keyword stuffing", "Use synonyms and related terms naturally. Keyword density check always passes."],
+          ["Refresh old posts", "Updating existing content signals freshness. Add new data, fix dead links."],
+          ["Short paragraphs", "2–4 lines max. Use bullet lists. Mobile readers scan, not read."],
+          ["Minimum 800 words", "Posts under 800 words rarely rank for competitive terms."],
+          ["Submit to Search Console", "After publishing, submit the sitemap URL in Google Search Console to speed up indexing."],
+        ].map(([title, desc]) => (
+          <div key={title} className="border border-gray-200 rounded-lg p-3.5 bg-white">
+            <p className="text-xs font-semibold text-gray-800 mb-0.5">{title}</p>
+            <p className="text-xs text-gray-500">{desc}</p>
+          </div>
+        ))}
       </div>
-    ),
-  },
-  {
-    id: "publish",
-    icon: <FiSave size={18} />,
-    title: "Saving & Publishing",
-    content: (
-      <div className="space-y-4">
-        <p className="text-gray-600">Use the status selector and Save button at the top-right of the editor to manage post state.</p>
-        <Table rows={[
-          ["Draft", "Post is saved but not visible on the website. Safe to work on.", ""],
-          ["Published", "Post is live on dignitestudios.com/blog and in the sitemap.", ""],
-        ]} />
-        <Step number={1} title="Save as Draft">
-          <p>Select <Badge>Draft</Badge> from the status dropdown and click <strong>Save Draft</strong>. You can come back and edit it anytime.</p>
-        </Step>
-        <Step number={2} title="Publish">
-          <p>Select <Badge color="green">Published</Badge> from the dropdown and click <strong>Save Draft</strong> (same button — the button label updates). The post goes live immediately.</p>
-        </Step>
-        <Step number={3} title="Unpublish">
-          <p>Open the post, change status back to <Badge>Draft</Badge>, and save. It is removed from the website and sitemap immediately.</p>
-        </Step>
-        <Warning>A featured image is required before you can publish. The editor will show an error if it is missing.</Warning>
-        <Tip>After publishing, verify the post is in the sitemap by visiting dignitestudios.com/sitemap.xml — your new post slug should appear there.</Tip>
-      </div>
-    ),
-  },
-  {
-    id: "stats",
-    icon: <FiEye size={18} />,
-    title: "Post Statistics",
-    content: (
-      <div className="space-y-4">
-        <p className="text-gray-600">The statistics panel in the right sidebar shows live metrics as you write.</p>
-        <Table rows={[
-          ["Word Count", "Total number of words in the post body", ""],
-          ["Character Count", "Total characters including spaces", ""],
-          ["Paragraphs", "Number of paragraph elements", ""],
-          ["Headings", "Number of heading elements (H1–H6)", ""],
-          ["Read Time", "Estimated at 265 WPM — updates live as you type", ""],
-        ]} />
-        <p className="font-semibold text-gray-800">Editing Read Time</p>
-        <p className="text-sm text-gray-600">The read time field is editable. Click the number directly and type a custom value. An <strong>auto</strong> link appears — click it to reset back to the auto-calculated value.</p>
-        <Tip>Aim for posts over 1,000 words for the best SEO performance. Posts between 1,500–2,500 words tend to rank highest for competitive keywords.</Tip>
-      </div>
-    ),
-  },
-  {
-    id: "categories",
-    icon: <FiTag size={18} />,
-    title: "Categories & Tags",
-    content: (
-      <div className="space-y-4">
-        <p className="text-gray-600">Categories and tags help organize content and create topical relevance for SEO.</p>
-        <p className="font-semibold text-gray-800">Categories</p>
-        <p className="text-sm text-gray-600">Broad topics (e.g. "Mobile Development", "SEO", "Case Studies"). Assign at least one per post. Manage categories from <strong>Dashboard → Categories</strong>.</p>
-        <p className="font-semibold text-gray-800">Tags</p>
-        <p className="text-sm text-gray-600">Specific keywords related to the post (e.g. "React Native", "iOS", "App Store"). Type tags in the Tags field separated by commas. Tags are flexible — no need to pre-create them.</p>
-        <Tip>Use 1–2 categories and 3–8 tags per post. Too many tags dilute topical focus.</Tip>
-        <Warning>Avoid creating near-duplicate categories (e.g. "Mobile App" and "Mobile Apps"). Merge similar topics into one category to build topical authority.</Warning>
-      </div>
-    ),
-  },
-  {
-    id: "sitemap",
-    icon: <FiSearch size={18} />,
-    title: "Sitemap",
-    content: (
-      <div className="space-y-4">
-        <p className="text-gray-600">The sitemap at <strong>dignitestudios.com/sitemap.xml</strong> is fully dynamic — it updates automatically every time you publish or unpublish a post.</p>
-        <Table rows={[
-          ["Static pages", "Homepage, services, industries, locations — always present", "Monthly"],
-          ["Blog index", "/blog — higher priority, daily refresh", "Daily"],
-          ["Blog posts", "Each published post slug — added instantly on publish", "Weekly"],
-        ]} />
-        <Tip>After publishing a new post, submit the sitemap URL to Google Search Console to speed up indexing. Go to Search Console → Sitemaps → enter https://www.dignitestudios.com/sitemap.xml</Tip>
-      </div>
-    ),
-  },
-  {
-    id: "best-practices",
-    icon: <FiCheckCircle size={18} />,
-    title: "SEO Best Practices",
-    content: (
-      <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          {[
-            ["One H1 per post", "The post title is your H1. Do not add another H1 inside the editor."],
-            ["Use H2 for sections", "Break up the content with H2 headings every 300–400 words."],
-            ["First paragraph matters", "Include your focus keyword in the first 100 words of the post."],
-            ["Internal linking", "Link to at least 2–3 other pages on the site in every post."],
-            ["External links", "Link to credible sources (research, statistics). Adds trust signals."],
-            ["Image optimization", "Compress images before upload. Use descriptive filenames."],
-            ["Meta description = CTA", "Write it like an ad — make it compelling enough to click."],
-            ["Avoid keyword stuffing", "Use synonyms and related terms naturally throughout the post."],
-            ["Update old posts", "Refreshing content with new info signals freshness to Google."],
-            ["Mobile-first writing", "Use short paragraphs (2–4 lines), clear headings, and bullet lists."],
-          ].map(([title, desc]) => (
-            <div key={title} className="bg-gray-50 border border-gray-200 rounded-xl p-3">
-              <p className="text-sm font-semibold text-gray-800 mb-0.5">{title}</p>
-              <p className="text-xs text-gray-600">{desc}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    ),
-  },
-];
+    </>
+  ),
+
+  publish: (
+    <>
+      <SectionTitle>Draft & Publish</SectionTitle>
+      <Para>Use the status dropdown and Save button at the top-right of the editor to manage post state.</Para>
+      <DataTable
+        headers={["Status", "Visibility"]}
+        rows={[
+          ["Draft", "Saved privately — not visible on the website"],
+          ["Published", "Live at dignitestudios.com/blog and included in the sitemap"],
+        ]}
+      />
+      <StepList steps={[
+        { title: "Save as Draft", body: 'Select Draft from the dropdown and click Save Draft. Edit anytime.' },
+        { title: "Publish", body: 'Set status to Published and click Save Draft (button label reflects status). Post goes live immediately.' },
+        { title: "Unpublish", body: 'Open the post, change status to Draft, save. Removed from site and sitemap at once.' },
+      ]} />
+      <Callout type="warning">A featured image is required before publishing. The editor will block the save and show an error if it is missing.</Callout>
+      <Callout type="tip">After publishing, verify the post appears in <code className="text-xs bg-white border border-emerald-200 px-1 rounded">dignitestudios.com/sitemap.xml</code>.</Callout>
+    </>
+  ),
+
+  sitemap: (
+    <>
+      <SectionTitle>Sitemap</SectionTitle>
+      <Para>
+        The sitemap at <code className="text-xs bg-gray-100 px-1.5 py-0.5 rounded text-[#F15C20]">dignitestudios.com/sitemap.xml</code> is fully dynamic.
+        It regenerates on every request — published posts are added instantly, unpublished posts are removed instantly.
+      </Para>
+      <DataTable
+        headers={["Entry type", "Change frequency"]}
+        rows={[
+          ["Homepage & static pages", "Monthly"],
+          ["Blog index (/blog)", "Daily"],
+          ["Each published blog post", "Weekly"],
+        ]}
+      />
+      <SubTitle>Submit to Google Search Console</SubTitle>
+      <StepList steps={[
+        { title: "Open Search Console", body: "Go to search.google.com/search-console" },
+        { title: "Select the property", body: "Choose dignitestudios.com" },
+        { title: "Go to Sitemaps", body: "Left sidebar → Sitemaps" },
+        { title: "Enter the URL", body: <><code className="text-xs bg-gray-100 px-1.5 py-0.5 rounded">https://www.dignitestudios.com/sitemap.xml</code> → Submit</> },
+      ]} />
+      <Callout type="tip">Resubmit the sitemap after a batch of new posts to prompt Google to crawl faster.</Callout>
+    </>
+  ),
+
+  stats: (
+    <>
+      <SectionTitle>Post Statistics</SectionTitle>
+      <Para>The statistics panel in the right sidebar shows live metrics computed from the editor content.</Para>
+      <DataTable
+        headers={["Metric", "How it is calculated"]}
+        rows={[
+          ["Word Count", "Total words in the post body"],
+          ["Character Count", "Total characters including spaces"],
+          ["Paragraphs", "Number of paragraph elements"],
+          ["Headings", "Number of H1–H6 elements"],
+          ["Read Time", "Words ÷ 265 WPM + 10s per image + 20s per code block, rounded up"],
+        ]}
+      />
+      <SubTitle>Editing read time</SubTitle>
+      <Para>
+        Click the read time number directly and type a custom value. An <code className="text-xs bg-gray-100 px-1.5 py-0.5 rounded">auto</code> link
+        appears — click it to reset back to the calculated value.
+      </Para>
+      <Callout type="tip">Posts over 1,500 words typically achieve the best balance of depth and ranking performance for competitive keywords.</Callout>
+    </>
+  ),
+
+  categories: (
+    <>
+      <SectionTitle>Categories & Tags</SectionTitle>
+      <SubTitle>Categories</SubTitle>
+      <Para>Broad topic groups (e.g. Mobile Development, SEO, Case Studies). Assign at least one per post. Manage categories from <strong>Dashboard → Categories</strong>.</Para>
+      <SubTitle>Tags</SubTitle>
+      <Para>Specific keywords related to the post (e.g. React Native, iOS, App Store). Enter in the Tags field separated by commas. No need to pre-create them.</Para>
+      <Callout type="tip">Use 1–2 categories and 3–8 tags per post. Too many tags dilute topical focus and create thin tag archive pages.</Callout>
+      <Callout type="warning">Avoid near-duplicate categories (e.g. "Mobile App" and "Mobile Apps"). Consolidate similar topics to build topical authority on fewer, stronger categories.</Callout>
+    </>
+  ),
+};
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function GuidePage() {
-  const [activeId, setActiveId] = useState("overview");
-  const active = SECTIONS.find((s) => s.id === activeId)!;
+  return (
+    <Suspense fallback={<div className="flex h-screen items-center justify-center text-sm text-gray-400">Loading…</div>}>
+      <GuideContent />
+    </Suspense>
+  );
+}
+
+function GuideContent() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  const rawSection = searchParams.get("section") ?? "getting-started";
+  const activeId = ALL_IDS.includes(rawSection) ? rawSection : "getting-started";
+
+  function setActiveId(id: string) {
+    router.replace(`/dashboard/guide?section=${id}`, { scroll: false });
+  }
+
+  // Breadcrumb
+  const parentGroup = NAV.find((g) => g.items?.some((i) => i.id === activeId));
+  const activeLabel =
+    parentGroup?.items?.find((i) => i.id === activeId)?.label ??
+    NAV.find((g) => g.id === activeId)?.label ?? "";
+
+  // Prev / next across flat list
+  const flat = NAV.flatMap((g) => (g.items ? g.items : [{ id: g.id, label: g.label }]));
+  const idx = flat.findIndex((i) => i.id === activeId);
+  const prev = idx > 0 ? flat[idx - 1] : null;
+  const next = idx < flat.length - 1 ? flat[idx + 1] : null;
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      {/* Left nav */}
-      <aside className="w-56 shrink-0 border-r border-gray-100 bg-white overflow-y-auto py-6">
-        <p className="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Contents</p>
-        <nav className="space-y-0.5 px-2">
-          {SECTIONS.map((s) => (
-            <button
-              key={s.id}
-              onClick={() => setActiveId(s.id)}
-              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors text-left ${
-                s.id === activeId
-                  ? "bg-[#F15C20] text-white font-medium"
-                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-              }`}
-            >
-              <span className="shrink-0">{s.icon}</span>
-              {s.title}
-            </button>
-          ))}
+    <div className="flex h-screen overflow-hidden bg-white">
+      {/* ── Left sidebar ─────────────────────────────────────────── */}
+      <aside className="w-52 shrink-0 border-r border-gray-100 flex flex-col overflow-y-auto">
+        <div className="px-4 pt-5 pb-3 border-b border-gray-100">
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Documentation</p>
+        </div>
+        <nav className="flex-1 px-2 py-3 space-y-0.5">
+          {NAV.map((group) =>
+            group.items ? (
+              <div key={group.id} className="mb-1">
+                <p className="px-2 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">{group.label}</p>
+                {group.items.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveId(item.id)}
+                    className={`w-full text-left px-3 py-1.5 rounded-md text-sm transition-colors ${
+                      item.id === activeId
+                        ? "bg-orange-50 text-[#F15C20] font-medium"
+                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <button
+                key={group.id}
+                onClick={() => setActiveId(group.id)}
+                className={`w-full text-left px-3 py-1.5 rounded-md text-sm font-medium transition-colors mb-1 ${
+                  group.id === activeId
+                    ? "bg-orange-50 text-[#F15C20]"
+                    : "text-gray-700 hover:text-gray-900 hover:bg-gray-50"
+                }`}
+              >
+                {group.label}
+              </button>
+            )
+          )}
         </nav>
       </aside>
 
-      {/* Content */}
-      <main className="flex-1 overflow-y-auto bg-[#fafafa]">
-        <div className="max-w-3xl mx-auto px-8 py-10">
-          {/* Header */}
-          <div className="flex items-center gap-3 mb-8 pb-6 border-b border-gray-200">
-            <div className="w-10 h-10 rounded-xl bg-[#F15C20] flex items-center justify-center text-white shrink-0">
-              {active.icon}
+      {/* ── Content ───────────────────────────────────────────────── */}
+      <main className="flex-1 overflow-y-auto bg-white">
+        <div className="max-w-2xl mx-auto px-10 py-10">
+          {/* Breadcrumb */}
+          {parentGroup && (
+            <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-5">
+              <span>{parentGroup.label}</span>
+              <FiChevronRight size={11} />
+              <span className="text-gray-600 font-medium">{activeLabel}</span>
             </div>
-            <div>
-              <p className="text-xs text-gray-400 font-medium uppercase tracking-wider">User Guide</p>
-              <h1 className="text-2xl font-bold text-gray-900">{active.title}</h1>
-            </div>
-          </div>
+          )}
 
-          {/* Section content */}
-          <div className="prose-sm max-w-none">{active.content}</div>
+          {/* Main content */}
+          <div>{CONTENT[activeId] ?? <p className="text-sm text-gray-400">Section not found.</p>}</div>
 
           {/* Prev / Next */}
-          <div className="flex justify-between mt-12 pt-6 border-t border-gray-200">
-            {SECTIONS.findIndex((s) => s.id === activeId) > 0 ? (
-              <button
-                onClick={() => setActiveId(SECTIONS[SECTIONS.findIndex((s) => s.id === activeId) - 1].id)}
-                className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors"
-              >
-                <FiChevronRight className="rotate-180" size={16} />
-                {SECTIONS[SECTIONS.findIndex((s) => s.id === activeId) - 1].title}
+          <div className="flex justify-between items-center mt-14 pt-6 border-t border-gray-100">
+            {prev ? (
+              <button onClick={() => setActiveId(prev.id)} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors group">
+                <FiChevronRight size={14} className="rotate-180 group-hover:-translate-x-0.5 transition-transform" />
+                <span>{prev.label}</span>
               </button>
             ) : <div />}
-            {SECTIONS.findIndex((s) => s.id === activeId) < SECTIONS.length - 1 ? (
-              <button
-                onClick={() => setActiveId(SECTIONS[SECTIONS.findIndex((s) => s.id === activeId) + 1].id)}
-                className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors"
-              >
-                {SECTIONS[SECTIONS.findIndex((s) => s.id === activeId) + 1].title}
-                <FiChevronRight size={16} />
+            {next ? (
+              <button onClick={() => setActiveId(next.id)} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors group">
+                <span>{next.label}</span>
+                <FiChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
               </button>
             ) : <div />}
           </div>

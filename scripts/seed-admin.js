@@ -46,7 +46,7 @@ async function seed() {
 
   // ── Change these values before running ──────────────────────────────────
   const email = "admin@dignitestudios.com";
-  const password = "ChangeMe123!";
+  const password = "Admin@123";
   const name = "Dignite Admin";
   const role = "admin";
   // ────────────────────────────────────────────────────────────────────────

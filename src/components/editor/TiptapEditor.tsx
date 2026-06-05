@@ -41,10 +41,9 @@ const DEFAULT_CTA = {
 };
 
 function CTABannerView({ node, updateAttributes }: any) {
-  const { heading, paragraph, buttonText, buttonHref, ctaType, inputPlaceholder } = node.attrs;
+  const { heading, paragraph, buttonText, buttonHref } = node.attrs;
   const [href, setHref] = useState<string>(buttonHref ?? "#");
   const [hrefFocused, setHrefFocused] = useState(false);
-  const isSubscribe = ctaType === "subscribe";
 
   useEffect(() => { setHref(buttonHref ?? "#"); }, [buttonHref]);
 
@@ -57,6 +56,8 @@ function CTABannerView({ node, updateAttributes }: any) {
     transition: "border-color 0.15s",
     ...extra,
   });
+
+  const BTN_H = 52;
 
   return (
     <NodeViewWrapper as="div" className="my-4 group/banner" contentEditable={false}>
@@ -88,59 +89,35 @@ function CTABannerView({ node, updateAttributes }: any) {
           {paragraph}
         </p>
 
-        {/* Button — subscribe type */}
-        {isSubscribe ? (
-          <div style={{ display: "flex", alignItems: "center", background: "#fff", borderRadius: 50, overflow: "hidden", maxWidth: 420, margin: "0 auto" }}>
-            <span
-              contentEditable suppressContentEditableWarning
-              onKeyDown={stopKey}
-              onBlur={(e) => updateAttributes({ inputPlaceholder: e.currentTarget.textContent ?? "" })}
-              style={{ flex: 1, padding: "14px 20px", fontSize: 14, color: "#888", outline: "none", cursor: "text", textAlign: "left", minWidth: 40 }}
-            >
-              {inputPlaceholder || "Enter your email..."}
-            </span>
-            <span
-              contentEditable suppressContentEditableWarning
-              onKeyDown={stopKey}
-              onBlur={(e) => updateAttributes({ buttonText: e.currentTarget.textContent ?? "" })}
-              style={{ background: "#F15C20", color: "#fff", padding: "14px 24px", borderRadius: 50, fontWeight: 600, fontSize: 14, whiteSpace: "nowrap", cursor: "text", outline: "none", flexShrink: 0 }}
-            >
-              {buttonText}
-            </span>
-          </div>
-        ) : (
-          /* Button — link type: pill + arrow circle */
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 0 }}>
-            <span
-              contentEditable suppressContentEditableWarning
-              onKeyDown={stopKey}
-              onBlur={(e) => updateAttributes({ buttonText: e.currentTarget.textContent ?? "" })}
-              style={{ display: "inline-block", background: "#fff", color: "#F15C20", fontSize: 14, fontWeight: 600, padding: "15px 32px", borderRadius: "50px", whiteSpace: "nowrap", outline: "none", cursor: "text", minWidth: 160, lineHeight: "1.2" }}
-            >
-              {buttonText}
-            </span>
-            <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", background: "#fff", color: "#F15C20", width: 52, height: 52, borderRadius: "50%", flexShrink: 0, marginLeft: 6 }}>
-              <FiArrowUpRight size={20} />
-            </span>
-          </div>
-        )}
+        {/* Button: pill + adjacent arrow circle, same height, no gap */}
+        <div style={{ display: "inline-flex", alignItems: "stretch" }}>
+          <span
+            contentEditable suppressContentEditableWarning
+            onKeyDown={stopKey}
+            onBlur={(e) => updateAttributes({ buttonText: e.currentTarget.textContent ?? "" })}
+            style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", background: "#fff", color: "#F15C20", fontSize: 14, fontWeight: 600, padding: "0 32px", borderRadius: "50px 0 0 50px", whiteSpace: "nowrap", outline: "none", cursor: "text", minWidth: 160, height: BTN_H, lineHeight: "1" }}
+          >
+            {buttonText}
+          </span>
+          <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", background: "#fff", color: "#F15C20", width: BTN_H, height: BTN_H, borderRadius: "0 50px 50px 0", flexShrink: 0 }}>
+            <FiArrowUpRight size={20} />
+          </span>
+        </div>
 
-        {/* Button URL input (link type only) */}
-        {!isSubscribe && (
-          <div className="mt-3 flex items-center justify-center gap-2">
-            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.7)" }}>URL:</span>
-            <input
-              type="url"
-              value={href}
-              onFocus={() => setHrefFocused(true)}
-              onBlur={() => { setHrefFocused(false); updateAttributes({ buttonHref: href }); }}
-              onChange={(e) => setHref(e.target.value)}
-              onKeyDown={(e) => { e.stopPropagation(); if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
-              style={{ background: "rgba(255,255,255,0.15)", border: hrefFocused ? "1px solid rgba(255,255,255,0.8)" : "1px solid rgba(255,255,255,0.3)", borderRadius: 6, padding: "4px 10px", fontSize: 11, color: "#fff", outline: "none", width: 220 }}
-              placeholder="https://example.com"
-            />
-          </div>
-        )}
+        {/* Button URL input */}
+        <div className="mt-3 flex items-center justify-center gap-2">
+          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.7)" }}>URL:</span>
+          <input
+            type="url"
+            value={href}
+            onFocus={() => setHrefFocused(true)}
+            onBlur={() => { setHrefFocused(false); updateAttributes({ buttonHref: href }); }}
+            onChange={(e) => setHref(e.target.value)}
+            onKeyDown={(e) => { e.stopPropagation(); if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+            style={{ background: "rgba(255,255,255,0.15)", border: hrefFocused ? "1px solid rgba(255,255,255,0.8)" : "1px solid rgba(255,255,255,0.3)", borderRadius: 6, padding: "4px 10px", fontSize: 11, color: "#fff", outline: "none", width: 220 }}
+            placeholder="https://example.com"
+          />
+        </div>
       </div>
 
       <p className="text-center text-xs text-gray-400 mt-1.5 opacity-0 group-hover/banner:opacity-100 transition-opacity">

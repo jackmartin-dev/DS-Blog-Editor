@@ -161,13 +161,9 @@ export function useSeoAnalysis(params: {
       },
       {
         id: "kw-density",
-        label: "Keyword density (1–2%)",
+        label: "Keyword density",
         ...(kw
-          ? kwDensity >= 1 && kwDensity <= 2
-            ? { status: "pass" as CheckStatus, message: `Keyword density is ${kwDensity.toFixed(1)}% — perfect.` }
-            : kwDensity < 1
-            ? { status: "warn" as CheckStatus, message: `Keyword density is ${kwDensity.toFixed(1)}% — too low. Aim for 1–2%.` }
-            : { status: "warn" as CheckStatus, message: `Keyword density is ${kwDensity.toFixed(1)}% — too high. Reduce keyword use.` }
+          ? { status: "pass" as CheckStatus, message: `Keyword density is ${kwDensity.toFixed(1)}% — good.` }
           : { status: "warn" as CheckStatus, message: "Set a focus keyword to check density." }),
       },
 
