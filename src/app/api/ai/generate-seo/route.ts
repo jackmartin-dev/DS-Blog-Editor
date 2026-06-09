@@ -63,44 +63,50 @@ export async function POST(req: NextRequest) {
     field === "excerpt" ? SYSTEM_EXCERPT :
     SYSTEM_FULL;
 
-  const response = await axios.post(
-    "https://openrouter.ai/api/v1/chat/completions",
-    {
-      model: "openai/gpt-4o-mini",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userMessage },
-      ],
-      temperature: 0.7,
-      max_tokens: field ? 200 : 600,
-    },
-    {
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://dignitestudios.com",
-        "X-OpenRouter-Title": "Dignite Studios Blog CMS",
-      },
-    }
-  );
-
-  const raw: string = response.data.choices?.[0]?.message?.content ?? "";
-
-  let parsed: Record<string, unknown>;
   try {
-    const cleaned = raw.replace(/```json|```/g, "").trim();
-    parsed = JSON.parse(cleaned);
-  } catch {
-    return NextResponse.json({ error: "AI returned invalid JSON. Please retry." }, { status: 502 });
-  }
+    const response = await axios.post(
+      "https://openrouter.ai/api/v1/chat/completions",
+      {
+        model: "openai/gpt-4o-mini",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userMessage },
+        ],
+        temperature: 0.7,
+        max_tokens: field ? 200 : 600,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://dignitestudios.com",
+          "X-OpenRouter-Title": "Dignite Studios Blog CMS",
+        },
+      }
+    );
 
-  // Hard-truncate to enforce character limits regardless of AI output
-  if (typeof parsed.seoTitle === "string" && parsed.seoTitle.length > 60) {
-    parsed.seoTitle = parsed.seoTitle.slice(0, 57) + "…";
-  }
-  if (typeof parsed.metaDescription === "string" && parsed.metaDescription.length > 160) {
-    parsed.metaDescription = parsed.metaDescription.slice(0, 157) + "…";
-  }
+    const raw: string = response.data.choices?.[0]?.message?.content ?? "";
 
-  return NextResponse.json(parsed);
+    let parsed: Record<string, unknown>;
+    try {
+      const cleaned = raw.replace(/```json|```/g, "").trim();
+      parsed = JSON.parse(cleaned);
+    } catch {
+      return NextResponse.json({ error: "AI returned invalid JSON. Please retry." }, { status: 502 });
+    }
+
+    // Hard-truncate to enforce character limits regardless of AI output
+    if (typeof parsed.seoTitle === "string" && parsed.seoTitle.length > 60) {
+      parsed.seoTitle = parsed.seoTitle.slice(0, 57) + "…";
+    }
+    if (typeof parsed.metaDescription === "string" && parsed.metaDescription.length > 160) {
+      parsed.metaDescription = parsed.metaDescription.slice(0, 157) + "…";
+    }
+
+    return NextResponse.json(parsed);
+  } catch (error: any) {
+    const errMsg = error?.response?.data?.error?.message || error.message || "Unknown AI Error";
+    console.error("AI Generation Error:", errMsg);
+    return NextResponse.json({ error: errMsg }, { status: 500 });
+  }
 }

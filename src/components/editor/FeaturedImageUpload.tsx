@@ -2,6 +2,7 @@
 import { useState, useRef } from "react";
 import { FiX, FiUpload } from "react-icons/fi";
 import Image from "next/image";
+import axios from "axios";
 
 interface FeaturedImageProps {
   url: string;
@@ -12,16 +13,28 @@ interface FeaturedImageProps {
 
 export function FeaturedImageUpload({ url, alt, onUrlChange, onAltChange }: FeaturedImageProps) {
   const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
   async function handleFile(file: File) {
     setUploading(true);
+    setProgress(0);
     const formData = new FormData();
     formData.append("file", file);
-    const res = await fetch("/api/upload", { method: "POST", body: formData });
-    const data = await res.json();
-    if (data.url) onUrlChange(data.url);
-    setUploading(false);
+    try {
+      const res = await axios.post("/api/upload", formData, {
+        onUploadProgress: (progressEvent) => {
+          const total = progressEvent.total ?? file.size;
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / total);
+          setProgress(percentCompleted);
+        },
+      });
+      if (res.data.url) onUrlChange(res.data.url);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setUploading(false);
+    }
   }
 
   function handleDrop(e: React.DragEvent) {
@@ -44,6 +57,15 @@ export function FeaturedImageUpload({ url, alt, onUrlChange, onAltChange }: Feat
             <FiX size={14} />
           </button>
         </div>
+      ) : uploading ? (
+        <div className="border-2 border-dashed border-[#F15C20] bg-orange-50 rounded-lg p-6 text-center transition-colors">
+          <div className="w-8 h-8 mx-auto mb-3 border-4 border-[#F15C20]/30 border-t-[#F15C20] rounded-full animate-spin"></div>
+          <p className="text-xs font-medium text-gray-900 mb-2">Uploading Image...</p>
+          <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+            <div className="bg-[#F15C20] h-1.5 transition-all duration-300" style={{ width: `${progress}%` }}></div>
+          </div>
+          <p className="text-[10px] text-gray-500 mt-1">{progress}% Complete</p>
+        </div>
       ) : (
         <div
           onDrop={handleDrop}
@@ -53,7 +75,7 @@ export function FeaturedImageUpload({ url, alt, onUrlChange, onAltChange }: Feat
         >
           <FiUpload className="mx-auto text-gray-400 mb-2" size={20} />
           <p className="text-xs text-gray-500">
-            {uploading ? "Uploading..." : "Click or drag to upload featured image"}
+            Click or drag to upload featured image
           </p>
           <p className="text-xs text-gray-400 mt-0.5">JPG, PNG, WebP, GIF</p>
           <input

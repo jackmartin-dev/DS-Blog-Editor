@@ -43,10 +43,12 @@ export function PostEditor({ initialPost, postId }: PostEditorProps) {
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
 
+  const createdAt = (initialPost?.createdAt as string) || new Date().toISOString();
+  const updatedAt = (initialPost?.updatedAt as string) || new Date().toISOString();
+
   // Post fields
   const [title, setTitle] = useState((initialPost?.title as string) ?? "");
   const [slug, setSlug] = useState((initialPost?.slug as string) ?? "");
-  const [slugManual, setSlugManual] = useState(!!initialPost?.slug);
   const [content, setContent] = useState<object>((initialPost?.content as object) ?? {});
   const [contentHtml, setContentHtml] = useState((initialPost?.contentHtml as string) ?? "");
   const [excerpt, setExcerpt] = useState((initialPost?.excerpt as string) ?? "");
@@ -92,10 +94,10 @@ export function PostEditor({ initialPost, postId }: PostEditorProps) {
 
   // Auto-generate slug from title
   useEffect(() => {
-    if (!slugManual && title) {
+    if (title) {
       setSlug(slugify(title, { lower: true, strict: true }));
     }
-  }, [title, slugManual]);
+  }, [title]);
 
   // Auto-fill SEO title from post title
   useEffect(() => {
@@ -145,9 +147,13 @@ export function PostEditor({ initialPost, postId }: PostEditorProps) {
         }),
       });
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to generate excerpt");
       if (data.excerpt) setExcerpt(data.excerpt);
-    } catch { /* silent */ }
-    setExcerptAiLoading(false);
+    } catch (err: any) {
+      setToast({ msg: err.message || "Failed to generate excerpt.", type: "error" });
+    } finally {
+      setExcerptAiLoading(false);
+    }
   }
 
   function buildPayload(overrideStatus?: "draft" | "published") {
@@ -297,7 +303,7 @@ export function PostEditor({ initialPost, postId }: PostEditorProps) {
               <input
                 type="text"
                 value={slug}
-                onChange={(e) => { setSlug(e.target.value); setSlugManual(true); }}
+                onChange={(e) => setSlug(e.target.value)}
                 placeholder="post-slug"
                 className="text-[#F15C20] bg-transparent border-none outline-none font-mono text-sm flex-1 min-w-0 border-b border-transparent hover:border-gray-300 focus:border-[#F15C20] transition-colors pb-0.5"
               />
@@ -323,7 +329,7 @@ export function PostEditor({ initialPost, postId }: PostEditorProps) {
               alt={featuredImage.alt}
               onUrlChange={(url) => setFeaturedImage((prev) => ({
                 url,
-                alt: prev.alt || (url ? title : ""),
+                alt: url ? title : "",
               }))}
               onAltChange={(alt) => setFeaturedImage((prev) => ({ ...prev, alt }))}
             />
@@ -520,6 +526,8 @@ export function PostEditor({ initialPost, postId }: PostEditorProps) {
             featuredImageUrl={featuredImage.url}
             postSlug={slug}
             authorName={author.name}
+            createdAt={createdAt}
+            updatedAt={updatedAt}
           />
         </div>
       </div>

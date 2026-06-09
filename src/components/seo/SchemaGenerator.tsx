@@ -130,6 +130,8 @@ interface SchemaGeneratorProps {
   authorName?: string;
   focusKeyword?: string;
   contentHtml?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -146,6 +148,8 @@ export function SchemaGenerator({
   authorName = "",
   focusKeyword = "",
   contentHtml = "",
+  createdAt = "",
+  updatedAt = "",
 }: SchemaGeneratorProps) {
   const websiteUrl = "https://dignitestudios.com";
 
@@ -164,8 +168,8 @@ export function SchemaGenerator({
           authorUrl: p.author?.url ?? "",
           publisher: p.publisher?.name ?? "Dignite Studios",
           publisherLogoUrl: p.publisher?.logo?.url ?? "https://dignitestudios.com/logo.png",
-          datePublished: p.datePublished ?? "",
-          dateModified: p.dateModified ?? "",
+          datePublished: p.datePublished || (createdAt ? new Date(createdAt).toISOString().split("T")[0] : ""),
+          dateModified: p.dateModified || (updatedAt ? new Date(updatedAt).toISOString().split("T")[0] : ""),
         };
       } catch { /* fall through */ }
     }
@@ -176,6 +180,8 @@ export function SchemaGenerator({
       imageUrl: featuredImageUrl,
       description: excerpt,
       authorName,
+      datePublished: createdAt ? new Date(createdAt).toISOString().split("T")[0] : "",
+      dateModified: updatedAt ? new Date(updatedAt).toISOString().split("T")[0] : "",
     };
   }
 

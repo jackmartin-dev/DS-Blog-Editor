@@ -38,6 +38,8 @@ interface SeoSidebarProps {
   postSlug?: string;
   authorName?: string;
   layout?: "stack" | "grid";
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 function Section({
@@ -241,6 +243,8 @@ export function SeoSidebar({
   postSlug = "",
   authorName = "",
   layout = "stack",
+  createdAt = "",
+  updatedAt = "",
 }: SeoSidebarProps) {
   const set = (key: keyof SeoData) => (value: string | boolean | object) => {
     onChange({ [key]: value } as Partial<SeoData>);
@@ -250,6 +254,11 @@ export function SeoSidebar({
   const [aiFieldLoading, setAiFieldLoading] = useState<"seoTitle" | "metaDescription" | null>(null);
   const [aiError, setAiError] = useState<string | null>(null);
   const [schemaOpen, setSchemaOpen] = useState(false);
+
+  const actualOgTitle = seo.ogTitle || seo.seoTitle || postTitle;
+  const actualOgDescription = seo.ogDescription || seo.metaDescription || postExcerpt;
+  const actualOgImage = seo.ogImage || featuredImageUrl;
+
 
   async function generateWithAI() {
     if (!postTitle.trim()) {
@@ -319,6 +328,8 @@ export function SeoSidebar({
           authorName={authorName}
           focusKeyword={seo.focusKeyword}
           contentHtml={contentHtml}
+          createdAt={createdAt}
+          updatedAt={updatedAt}
         />
       )}
 
@@ -444,25 +455,25 @@ export function SeoSidebar({
 
             <Section title="Social Preview (Open Graph)" defaultOpen={false}>
               <Field label="OG Title">
-                <Input value={seo.ogTitle} onChange={set("ogTitle") as (v: string) => void} placeholder="Defaults to SEO title" />
+                <Input value={seo.ogTitle} onChange={set("ogTitle") as (v: string) => void} placeholder={seo.seoTitle || postTitle || "Defaults to SEO title"} />
               </Field>
               <Field label="OG Description">
-                <Textarea value={seo.ogDescription} onChange={set("ogDescription") as (v: string) => void} placeholder="Defaults to meta description" rows={2} />
+                <Textarea value={seo.ogDescription} onChange={set("ogDescription") as (v: string) => void} placeholder={seo.metaDescription || postExcerpt || "Defaults to meta description"} rows={2} />
               </Field>
               <Field label="OG Image URL" hint="Recommended: 1200×630px">
-                <Input value={seo.ogImage} onChange={set("ogImage") as (v: string) => void} placeholder="https://... or use featured image" />
+                <Input value={seo.ogImage} onChange={set("ogImage") as (v: string) => void} placeholder={featuredImageUrl || "https://... or use featured image"} />
               </Field>
-              {(seo.ogImage || seo.ogTitle) && (
+              {(actualOgImage || actualOgTitle) && (
                 <div className="border border-gray-200 rounded-lg overflow-hidden mt-1">
-                  {seo.ogImage && (
+                  {actualOgImage && (
                     <div className="bg-gray-100 h-32 overflow-hidden">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={seo.ogImage} alt="OG preview" className="w-full h-full object-cover" onError={() => {}} />
+                      <img src={actualOgImage} alt="OG preview" className="w-full h-full object-cover" onError={() => {}} />
                     </div>
                   )}
                   <div className="px-3 py-2 bg-gray-50">
-                    <p className="text-xs font-semibold text-gray-900 truncate">{seo.ogTitle || seo.seoTitle}</p>
-                    <p className="text-xs text-gray-500 line-clamp-2 mt-0.5">{seo.ogDescription || seo.metaDescription}</p>
+                    <p className="text-xs font-semibold text-gray-900 truncate">{actualOgTitle}</p>
+                    <p className="text-xs text-gray-500 line-clamp-2 mt-0.5">{actualOgDescription}</p>
                     <p className="text-xs text-gray-400 mt-0.5 uppercase tracking-wide text-[10px]">dignitestudios.com</p>
                   </div>
                 </div>
@@ -477,13 +488,13 @@ export function SeoSidebar({
                 </select>
               </Field>
               <Field label="Twitter Title">
-                <Input value={seo.twitterTitle} onChange={set("twitterTitle") as (v: string) => void} placeholder="Defaults to OG title" />
+                <Input value={seo.twitterTitle} onChange={set("twitterTitle") as (v: string) => void} placeholder={actualOgTitle || "Defaults to OG title"} />
               </Field>
               <Field label="Twitter Description">
-                <Textarea value={seo.twitterDescription} onChange={set("twitterDescription") as (v: string) => void} placeholder="Defaults to OG description" rows={2} />
+                <Textarea value={seo.twitterDescription} onChange={set("twitterDescription") as (v: string) => void} placeholder={actualOgDescription || "Defaults to OG description"} rows={2} />
               </Field>
               <Field label="Twitter Image URL">
-                <Input value={seo.twitterImage} onChange={set("twitterImage") as (v: string) => void} placeholder="Defaults to OG image" />
+                <Input value={seo.twitterImage} onChange={set("twitterImage") as (v: string) => void} placeholder={actualOgImage || "Defaults to OG image"} />
               </Field>
             </Section>
           </div>
@@ -544,25 +555,25 @@ export function SeoSidebar({
           {/* Open Graph */}
           <Section title="Social Preview (Open Graph)" defaultOpen={false}>
             <Field label="OG Title">
-              <Input value={seo.ogTitle} onChange={set("ogTitle") as (v: string) => void} placeholder="Defaults to SEO title" />
+              <Input value={seo.ogTitle} onChange={set("ogTitle") as (v: string) => void} placeholder={seo.seoTitle || postTitle || "Defaults to SEO title"} />
             </Field>
             <Field label="OG Description">
-              <Textarea value={seo.ogDescription} onChange={set("ogDescription") as (v: string) => void} placeholder="Defaults to meta description" rows={2} />
+              <Textarea value={seo.ogDescription} onChange={set("ogDescription") as (v: string) => void} placeholder={seo.metaDescription || postExcerpt || "Defaults to meta description"} rows={2} />
             </Field>
             <Field label="OG Image URL" hint="Recommended: 1200×630px">
-              <Input value={seo.ogImage} onChange={set("ogImage") as (v: string) => void} placeholder="https://... or use featured image" />
+              <Input value={seo.ogImage} onChange={set("ogImage") as (v: string) => void} placeholder={featuredImageUrl || "https://... or use featured image"} />
             </Field>
-            {(seo.ogImage || seo.ogTitle) && (
+            {(actualOgImage || actualOgTitle) && (
               <div className="border border-gray-200 rounded-lg overflow-hidden mt-1">
-                {seo.ogImage && (
+                {actualOgImage && (
                   <div className="bg-gray-100 h-32 overflow-hidden">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={seo.ogImage} alt="OG preview" className="w-full h-full object-cover" onError={() => {}} />
+                    <img src={actualOgImage} alt="OG preview" className="w-full h-full object-cover" onError={() => {}} />
                   </div>
                 )}
                 <div className="px-3 py-2 bg-gray-50">
-                  <p className="text-xs font-semibold text-gray-900 truncate">{seo.ogTitle || seo.seoTitle}</p>
-                  <p className="text-xs text-gray-500 line-clamp-2 mt-0.5">{seo.ogDescription || seo.metaDescription}</p>
+                  <p className="text-xs font-semibold text-gray-900 truncate">{actualOgTitle}</p>
+                  <p className="text-xs text-gray-500 line-clamp-2 mt-0.5">{actualOgDescription}</p>
                   <p className="text-xs text-gray-400 mt-0.5 uppercase tracking-wide text-[10px]">dignitestudios.com</p>
                 </div>
               </div>
@@ -578,13 +589,13 @@ export function SeoSidebar({
               </select>
             </Field>
             <Field label="Twitter Title">
-              <Input value={seo.twitterTitle} onChange={set("twitterTitle") as (v: string) => void} placeholder="Defaults to OG title" />
+              <Input value={seo.twitterTitle} onChange={set("twitterTitle") as (v: string) => void} placeholder={actualOgTitle || "Defaults to OG title"} />
             </Field>
             <Field label="Twitter Description">
-              <Textarea value={seo.twitterDescription} onChange={set("twitterDescription") as (v: string) => void} placeholder="Defaults to OG description" rows={2} />
+              <Textarea value={seo.twitterDescription} onChange={set("twitterDescription") as (v: string) => void} placeholder={actualOgDescription || "Defaults to OG description"} rows={2} />
             </Field>
             <Field label="Twitter Image URL">
-              <Input value={seo.twitterImage} onChange={set("twitterImage") as (v: string) => void} placeholder="Defaults to OG image" />
+              <Input value={seo.twitterImage} onChange={set("twitterImage") as (v: string) => void} placeholder={actualOgImage || "Defaults to OG image"} />
             </Field>
           </Section>
 

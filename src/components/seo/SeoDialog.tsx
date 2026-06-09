@@ -22,6 +22,8 @@ interface SeoDialogProps {
   featuredImageUrl?: string;
   postSlug?: string;
   authorName?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export function SeoDialog({
@@ -35,6 +37,8 @@ export function SeoDialog({
   featuredImageUrl,
   postSlug,
   authorName,
+  createdAt,
+  updatedAt,
 }: SeoDialogProps) {
   const [open, setOpen] = useState(false);
 
@@ -99,6 +103,8 @@ export function SeoDialog({
             featuredImageUrl={featuredImageUrl}
             postSlug={postSlug}
             authorName={authorName}
+            createdAt={createdAt}
+            updatedAt={updatedAt}
             layout="grid"
           />
         </div>

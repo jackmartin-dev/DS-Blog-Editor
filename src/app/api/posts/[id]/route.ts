@@ -41,6 +41,15 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     body.publishedAt = new Date();
   }
 
+  if (body.slug) {
+    let slug = body.slug;
+    let counter = 1;
+    while (await BlogPost.exists({ slug, _id: { $ne: id } })) {
+      slug = `${body.slug}-${counter++}`;
+    }
+    body.slug = slug;
+  }
+
   const post = await BlogPost.findByIdAndUpdate(id, body, { new: true, runValidators: true });
   if (!post) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json(post);

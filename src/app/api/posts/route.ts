@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
   await connectDB();
   const body = await req.json();
 
-  const baseSlug = slugify(body.title ?? "untitled", { lower: true, strict: true });
+  const baseSlug = body.slug || slugify(body.title ?? "untitled", { lower: true, strict: true });
   let slug = baseSlug;
   let counter = 1;
 

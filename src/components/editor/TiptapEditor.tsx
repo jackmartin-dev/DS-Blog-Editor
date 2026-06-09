@@ -441,6 +441,7 @@ export function TiptapEditor({ content, onChange }: TiptapEditorProps) {
       Link.configure({
         openOnClick: false,
         autolink: true,
+        validate: (href) => true, // Accept any URL including internal relative paths
         HTMLAttributes: { target: null, rel: null, class: null },
       }),
       CustomImage,
@@ -786,7 +787,7 @@ export function TiptapEditor({ content, onChange }: TiptapEditorProps) {
           <button
             ref={linkBtnRef}
             type="button"
-            onMouseDown={(e) => { e.preventDefault(); handleLinkButtonClick(); }}
+            onClick={(e) => { e.preventDefault(); handleLinkButtonClick(); }}
             title={editor.isActive("link") ? "Open / edit link" : "Insert link"}
             className={`p-1.5 rounded text-sm transition-colors ${
               editor.isActive("link") ? "bg-[#F15C20] text-white" : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
@@ -797,7 +798,7 @@ export function TiptapEditor({ content, onChange }: TiptapEditorProps) {
           {/* Link popover — shown when cursor is on an existing link */}
           {linkPopoverOpen && editor.isActive("link") && (
             <div
-              className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-50 overflow-hidden"
+              className="absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-50 overflow-hidden"
               style={{ minWidth: 180 }}
               onMouseDown={(e) => e.stopPropagation()}
             >
@@ -905,8 +906,15 @@ export function TiptapEditor({ content, onChange }: TiptapEditorProps) {
             if ((node as any).__linkGuard) return;
             (node as any).__linkGuard = true;
             node.addEventListener("click", (e) => {
-              if ((e.target as HTMLElement).closest("a")) e.preventDefault();
-            }, true);
+              const a = (e.target as HTMLElement).closest("a");
+              if (a) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (e.ctrlKey || e.metaKey) {
+                  window.open(a.href, "_blank");
+                }
+              }
+            }, { capture: true });
           }}
         />
       </div>
@@ -924,7 +932,7 @@ export function TiptapEditor({ content, onChange }: TiptapEditorProps) {
           </DialogHeader>
           <div className="space-y-4">
             <input
-              type="url"
+              type="text"
               value={linkUrl}
               onChange={(e) => setLinkUrl(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && applyLink()}
